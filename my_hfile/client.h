@@ -9,6 +9,7 @@
 #include "My_struct.h"
 
 extern cursor table_cursor;
+extern cursor muem_cursor;
 extern cursor select_cursor;
 extern cell cell_data[10][10];
 extern change_selete My_change;

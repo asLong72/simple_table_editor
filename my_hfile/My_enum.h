@@ -31,8 +31,16 @@ typedef enum change_selete
 	sum,
 	max,
 	min,
-	arg,
+	avr,
 	copy,
 }change_selete;
+typedef enum FUN_TYPE//合计、求平均、求最大 / 小
+{
+	NONE_FUN,
+	SUM,
+	AVR,
+	MIN,
+	MAX,
+}FUN_TYPE;
 
 #endif // !_ENUM_

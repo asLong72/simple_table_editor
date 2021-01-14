@@ -4,10 +4,11 @@
 #include "My_enum.h"
 #include "queue.h"
 #include "array.h"
+#include "stack.h"
 #include "hashmap.h"
 
-#define TRUE 1;
-#define FALSE 1;
+#define TRUE 1
+#define FALSE 0
 typedef struct cell
 {
 	type cell;

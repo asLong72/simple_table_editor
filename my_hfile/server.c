@@ -1,17 +1,22 @@
 #include "server.h"
 
 #define normal_muen_size 3
-#define change_muen_size 4
+#define change_muen_size 7
+#define edit_muen_size  3 
 #define sort_muen_size_for_STR  4 
 #define sort_muen_size (cell_data[table_cursor.y - 1][table_cursor.x - 1].cell == STR ? sort_muen_size_for_STR : sort_muen_size_for_STR-1)
+_Bool if_select_cmd;
 _Bool if_check;
 _Bool if_Vertical;
 _Bool if_rise;
+int readProc_precent = 0;
 
 _Bool* set[sort_muen_size_for_STR];
 
 DWORD WINAPI serving(LPVOID pM)
 {
+	readProc_precent = 0;
+	if_select_cmd = FALSE;
 	set[0] = NULL;
 	set[1] = &if_Vertical;
 	set[2] = &if_rise;
@@ -19,8 +24,9 @@ DWORD WINAPI serving(LPVOID pM)
 	if_check = FALSE;
 	if_Vertical = FALSE;
 	if_rise = FALSE;
+	keyin.rail = 0;
 	My_process = CHANGED;
-	//My_process = VEIWING;
+	//My_change = sum;
 	temp_str = (char*)malloc(sizeof(char) * strlen(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real) + 1);
 	if (!temp_str)
 	{
@@ -43,33 +49,42 @@ DWORD WINAPI serving(LPVOID pM)
 		//printf("%d\n", My_change);
 		//printf("%d\n", key);
 		//printf("%s\n", temp_str);
-		if (key == 27)
+		//printf("%d\n", select_cursor.x);
+		//printf("%d\n", muem_cursor.x);
+		switch (key)
 		{
+		case 27:
+			My_process = ENDING;
 			cmd_exit();
+			break;
+		default:
+			break;
 		}
 		switch (My_process)
 		{
 		case NONE_PROC:
 			break;
+		case SAVING:
+			cmd_save();
+
+			My_process = VEIWING;
+			break;
 		case LOADING:
+			cmd_load();
+			break;
+		case ENDING:
+			cmd_exit();
 			break;
 		case VEIWING:
 			switch (My_change)
 			{
 			case none_change:
-			case select_cmd:
 				normal_input(key);
 				break;
 			default:
-				My_process = CHANGING;
 				break;
 			}
 
-			break;
-		case SAVING:
-			My_process;
-
-			My_process = VEIWING;
 			break;
 		case TOCHANGE:
 			switch (My_change)
@@ -80,11 +95,15 @@ DWORD WINAPI serving(LPVOID pM)
 			case move_cursor:
 				break;
 			case edit:
+				change_edit(key);
 				break;
 			case sort:
+				change_sort(key);
+				break;
+			case sum:
+				change_sum(key);
 				break;
 			default:
-				My_process = CHANGED;
 				break;
 			}
 			break;
@@ -103,32 +122,23 @@ DWORD WINAPI serving(LPVOID pM)
 			case sum:
 				change_sum(key);
 				break;
+			case avr:
+				break;
+			case max:
+				break;
+			case min:
+				break;
+			case copy:
+				break;
 			default:
-				My_process = CHANGED;
 				break;
 			}
-
+			//
 			break;
 		case CHANGED:
-			switch (My_change)
+			if (My_change == none_change)
 			{
-			case none_change:
-				select_cursor.x = 1;
-				select_cursor.y = 1;
-				break;
-			case select_change:
-				My_process = TOCHANGE;
-				break;
-			case move_cursor:
-				break;
-			case edit:
-				My_process = CHANGING;
-				break;
-			case sort:
-				My_process = CHANGING;
-				break;
-			default:
-				break;
+				//My_process = VEIWING;
 			}
 			break;
 		default:
@@ -137,6 +147,7 @@ DWORD WINAPI serving(LPVOID pM)
 		//Sleep(500);
 	}
 }
+
 void normal_input(int key)
 {
 	switch (key)
@@ -174,27 +185,35 @@ void normal_input(int key)
 		}
 		break;
 	case 115://ctrl+左
-		if (select_cursor.x > 1)
+		if (muem_cursor.x > 1)
 		{
-			select_cursor.x--;
-			My_change = select_cmd;
-			My_process = CHANGED;
+			muem_cursor.x--;
 		}
+		else
+		{
+			muem_cursor.x = 1;
+		}
+		My_change = move_cursor;
+		My_process = CHANGING;
 		break;
 	case 116://ctrl+右
-		if (select_cursor.x < normal_muen_size)
+		if (muem_cursor.x < normal_muen_size)
 		{
-			select_cursor.x++;
-			My_change = select_cmd;
-			My_process = CHANGED;
+			muem_cursor.x++;
 		}
+		else
+		{
+			muem_cursor.x = normal_muen_size;
+		}
+		My_change = move_cursor;
+		My_process = CHANGING;
 		break;
 	case 13://回车
 		My_process = TOCHANGE;
 		My_change = select_change;
 		break;
 	case 10://ctrl+回车
-		switch (select_cursor.x)
+		switch (muem_cursor.x)
 		{
 		case 1:
 			My_process = SAVING;
@@ -203,7 +222,7 @@ void normal_input(int key)
 			My_process = LOADING;
 			break;
 		case 3:
-			exit(0);
+			My_process = ENDED;
 			break;
 		default:
 			break;
@@ -212,92 +231,71 @@ void normal_input(int key)
 	default:
 		break;
 	}
+	select_cursor = table_cursor;
 }
-void change_select(int key)
-{
-	switch (key)
-	{
-	case 72://上
-		if (select_cursor.x > 1)
-		{
-			select_cursor.x--;
-			My_process = CHANGED;
-		}
-		break;
-	case 80://下 
-		if (select_cursor.x < change_muen_size)
-		{
-			select_cursor.x++;
-			My_process = CHANGED;
-		}
-		break;
-	case 75://左		
-		if (select_cursor.x > 1)
-		{
-			select_cursor.x--;
-			My_process = CHANGED;
-		}
-		break;
-	case 77://右
-		if (select_cursor.x < change_muen_size)
-		{
-			select_cursor.x++;
-			My_process = CHANGED;
-		}
-		break;
-	case 13://回车
-		switch (select_cursor.x)
-		{
-		case 0:
-			My_change = select_change;
-			break;
-		case 1:
-			keyin.rail = strlen(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real);
-			int i = 0;
-			for (; i < keyin.rail; i++)
-			{
-				keyin.data[i] = cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real[i];
-			}
-			My_change = edit;
-			break;
-		case 2:
-			My_change = sort;
-			break;
-		case 3:
-			My_change = sum;
-			break;
-		default:
-			My_change = select_change;
-			break;
-		}
-		select_cursor.x = 1;
-		select_cursor.y = 1;
-		My_process = CHANGING;
-		return;
-		break;
-	default:
-		break;
-	}
 
-}
 void cmd_save()
 {
-	FILE* a = fopen("", "wt");
-
-
+	FILE* a = fopen("Longs_simple_table.txt", "wt");
+	readProc_precent = 0;
+	for (size_t i = 0; i < 10; i++)
+	{
+		for (size_t j = 0; j < 10; j++)
+		{
+			fwrite(&cell_data[i][j].cell, sizeof(cell), 1, a);
+			int len = strlen(cell_data[i][j].data_real);
+			fwrite(&len, sizeof(int), 1, a);
+			fwrite(cell_data[i][j].data_real, sizeof(char), len, a);
+			len = strlen(cell_data[i][j].str_print);
+			fwrite(&len, sizeof(int), 1, a);
+			fwrite(cell_data[i][j].str_print, sizeof(char), len, a);
+		}
+		readProc_precent++;
+	}
 
 	fclose(a);
-	printf("SAVED");
 }
 void cmd_load()
 {
+	FILE* a = fopen("Longs_simple_table.txt", "rt");
+	if (!a)
+	{
+		readProc_precent = -1;
+		return;
+	}
+	readProc_precent = 0;
+	for (size_t i = 0; i < 10; i++)
+	{
+		for (size_t j = 0; j < 10; j++)
+		{
+			fread(&cell_data[i][j].cell, sizeof(cell), 1, a);
+			int len = 0;
+			fread(&len, sizeof(int), 1, a);
+			free(cell_data[i][j].data_real);
+			cell_data[i][j].data_real = (char)malloc(sizeof(char) * (len + 4));
+			if (!cell_data[i][j].data_real)
+			{
+				exit(-1);
+			}
+			fread(cell_data[i][j].data_real, sizeof(char), len, a);
+			fread(&len, sizeof(int), 1, a);
+			free(cell_data[i][j].str_print);
+			cell_data[i][j].str_print = (char)malloc(sizeof(char) * (len + 4));
+			if (!cell_data[i][j].str_print)
+			{
+				exit(-1);
+			}
+			fread(cell_data[i][j].str_print, sizeof(char), len, a);
+		}
+		readProc_precent++;
+	}
 
+	fclose(a);
 }
 void cmd_exit()
 {
 	char a[] = "程序退出";
 	int len = strlen(a);
-	My_process = ENDING;
 	while (My_process != ENDED);
 	system("cls");
 	for (size_t i = 0; i < len; i++)
@@ -314,67 +312,229 @@ void cmd_exit()
 	exit(0);
 }
 
-void change_edit(int key)
+void change_select(int key)
 {
 	switch (key)
 	{
-	case 0:
-		break;
 	case 72://上
-		break;
-	case 80://下
-		break;
-	case 75://左
-		if (select_cursor.x > 1)
+		if (muem_cursor.x > 1)
 		{
-			select_cursor.x--;
-			My_process = CHANGED;
+			muem_cursor.x--;
 		}
+		else
+		{
+			muem_cursor.x = 1;
+		}
+		My_process = TOCHANGE;
+		break;
+	case 80://下 
+		if (muem_cursor.x < change_muen_size)
+		{
+			muem_cursor.x++;
+		}
+		else
+		{
+			muem_cursor.x = change_muen_size;
+		}
+		My_process = TOCHANGE;
+		break;
+	case 75://左		
+		if (muem_cursor.x > 1)
+		{
+			muem_cursor.x--;
+		}
+		else
+		{
+			muem_cursor.x = 1;
+		}
+		My_process = TOCHANGE;
 		break;
 	case 77://右
-		if (select_cursor.x)
+		if (muem_cursor.x < change_muen_size)
 		{
-			select_cursor.x++;
-			My_process = CHANGED;
+			muem_cursor.x++;
 		}
+		else
+		{
+			muem_cursor.x = change_muen_size;
+		}
+		My_process = TOCHANGE;
 		break;
 	case 13://回车
-		if (temp_str != NULL)
+		switch (muem_cursor.x)
 		{
-			free(temp_str);
+		case 0:
+			My_change = select_change;
+			break;
+		case 1:
+			change_selectcursor();
+			switch (cell_data[table_cursor.y - 1][table_cursor.x - 1].cell)
+			{
+			case NUM:
+				muem_cursor.x = 1;
+				break;
+			case STR:
+				muem_cursor.x = 2;
+				break;
+			case FUN:
+				muem_cursor.x = 3;
+				break;
+			default:
+				muem_cursor.x = 1;
+				break;
+			}
+			My_change = edit;
+			break;
+		case 2:
+			My_change = sort;
+			break;
+		case 3:
+			My_change = sum;
+			break;
+		case 4:
+			My_change = avr;
+			break;
+		case 5:
+			My_change = max;
+			break;
+		case 6:
+			My_change = min;
+			break;
+		case 7:
+			My_change = copy;
+			break;
+		default:
+			My_change = select_change;
+			break;
 		}
-		temp_str = (char*)malloc(sizeof(char) * (keyin.rail + strlen(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real) + 3));
-		if (!temp_str)
-		{
-			exit(-1);
-		}
-		temp_str[0] = 0;
-		temp_str[keyin.rail] = 0;
-		for (size_t i = 0; keyin.rail; i++)
-		{
-			temp_str[i] = (char)out_queue(&keyin);
-			//printf("%c", temp_str[i]);
-		}
-		free(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real);
-		cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real = (char*)malloc(sizeof(char) * (strlen(temp_str) + 3));
-		if (!cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real)
-		{
-			exit(-1);
-		}
-		cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real[0] = 0;
-		strcat(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real, temp_str);
-		cell_data[table_cursor.y - 1][table_cursor.x - 1].str_print = cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real;
-
-		My_change = none_change;
-		My_process = CHANGED;
+		return;
 		break;
 	default:
-		if (key >= 32 && key <= 127)
-		{
-			in_queue(&keyin, key);
-		}
 		break;
 	}
+
+}
+void change_edit(int key)
+{
+	if (My_process == TOCHANGE)
+	{
+		switch (key)
+		{
+		case 0:
+			break;
+		case 8:
+			if (keyin.rail)
+			{
+				keyin.rail--;
+			}
+			break;
+			//case 75://左
+			//	if (stream_cursor.x > 1)
+			//	{
+			//		stream_cursor.x--;
+			//	}
+			//	else
+			//	{
+			//		stream_cursor.x = 1;
+			//	}
+			//	break;
+			//case 77://右
+			//	if (stream_cursor.x < keyin.rail)
+			//	{
+			//		stream_cursor.x++;
+			//	}
+			//	else
+			//	{
+			//		stream_cursor.x = keyin.rail;
+			//	}
+			//	break;
+		case 13://回车
+			if_select_cmd = TRUE;
+			My_process = CHANGING;
+			break;
+		default:
+			if (key >= 32 && key <= 127)
+			{
+				in_queue(&keyin, key);
+			}
+			break;
+		}
+	}
+	else
+	{
+		switch (key)
+		{
+		case 75://左
+			if (muem_cursor.x > 1)
+			{
+				muem_cursor.x--;
+			}
+			else
+			{
+				muem_cursor.x = 1;
+			}
+			break;
+		case 77://右
+			if (muem_cursor.x < edit_muen_size)
+			{
+				muem_cursor.x++;
+			}
+			else
+			{
+				muem_cursor.x = edit_muen_size - 1;
+			}
+			break;
+		case 13:
+			if (temp_str != NULL)
+			{
+				free(temp_str);
+			}
+			temp_str = (char*)malloc(sizeof(char) * (keyin.rail + strlen(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real) + 3));
+			if (!temp_str)
+			{
+				exit(-1);
+			}
+			temp_str[0] = 0;
+			temp_str[keyin.rail] = 0;
+			for (size_t i = 0; keyin.rail; i++)
+			{
+				temp_str[i] = (char)out_queue(&keyin);
+				//printf("%c", temp_str[i]);
+			}
+			free(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real);
+			cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real = (char*)malloc(sizeof(char) * (strlen(temp_str) + 3));
+			if (!cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real)
+			{
+				exit(-1);
+			}
+			cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real[0] = 0;
+			strcat(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real, temp_str);
+
+			switch (muem_cursor.x)
+			{
+			case 1:
+				cell_data[table_cursor.y - 1][table_cursor.x - 1].cell = NUM;
+				break;
+			case 2:
+				cell_data[table_cursor.y - 1][table_cursor.x - 1].cell = STR;
+				break;
+			case 3:
+				cell_data[table_cursor.y - 1][table_cursor.x - 1].cell = FUN;
+				break;
+			default:
+				break;
+			}
+			cell_data[table_cursor.y - 1][table_cursor.x - 1].str_print = get_funstr_print(table_cursor.x, table_cursor.y);
+
+			if_select_cmd = FALSE;
+			muem_cursor.x = 1;
+			My_change = none_change;
+			My_process = CHANGED;
+		default:
+			break;
+		}
+	}
+
 }
 void change_tablecursor()
 {
@@ -390,7 +550,12 @@ void change_tablecursor()
 }
 void change_selectcursor()
 {
-	My_process = CHANGED;
+	keyin.rail = strlen(cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real);
+	int i = 0;
+	for (; i < keyin.rail; i++)
+	{
+		keyin.data[i] = cell_data[table_cursor.y - 1][table_cursor.x - 1].data_real[i];
+	}
 }
 void change_sort(int key)
 {
@@ -403,25 +568,28 @@ void change_sort(int key)
 	case 80://下
 		break;
 	case 75://左
-		if (select_cursor.x > 1)
+		if (muem_cursor.x > 1)
 		{
-			select_cursor.x--;
+			muem_cursor.x--;
 			My_process = CHANGED;
 		}
 		break;
 	case 77://右
-		if (select_cursor.x < sort_muen_size)
+		if (muem_cursor.x < sort_muen_size)
 		{
-			select_cursor.x++;
+			muem_cursor.x++;
 			My_process = CHANGED;
 		}
 		break;
 	case 13://回车
-		switch (select_cursor.x)
+		switch (muem_cursor.x)
 		{
 		case 1:
 			sort_str();
+
+			if_select_cmd = FALSE;
 			My_change = none_change;
+			muem_cursor.x = 1;
 			break;
 		case 2:
 			if_Vertical = 1 - if_Vertical;
@@ -435,6 +603,7 @@ void change_sort(int key)
 		default:
 			break;
 		}
+
 		My_process = CHANGED;
 		break;
 	default:
@@ -442,61 +611,492 @@ void change_sort(int key)
 		break;
 	}
 }
+cursor str2postion(char* str)
+{
+	cursor a;
+	char temp_c;
+	sscanf(str, "%c%d", &temp_c, &a.x);
+	a.y = (temp_c - 'A' + 1);
+	return a;
+}
 void change_sum(int key)
 {
-	switch (key)
+	if (My_process == TOCHANGE)
 	{
-	case 72://上
-		if (select_cursor.y > 1)
+		switch (key)
 		{
-			select_cursor.y--;
-			My_process = CHANGED;
-		}
-		break;
-	case 80://下 
-		if (select_cursor.y < 10)
-		{
-			select_cursor.y++;
-			My_process = CHANGED;
-		}
-		break;
-	case 75://左		
-		if (select_cursor.x > 1)
-		{
-			select_cursor.x--;
-			My_process = CHANGED;
-		}
-		break;
-	case 77://右
-		if (select_cursor.x < 10)
-		{
-			select_cursor.x++;
-			My_process = CHANGED;
-		}
-		break;
-	case 13://回车
-		;
-		int sum = 0;
-		int tempmax_x = table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x, tempmax_y = table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y;
-
-		for (size_t i = table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y; i < tempmax_y; i++)
-		{
-			for (size_t j = table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x; j < tempmax_x; j++)
+		case 72://上
+			if (select_cursor.y > 1)
 			{
-				if (cell_data[i][j].cell == NUM)
-				{
-					//sum += cell_data[i][j].data_real;
-				}
+				select_cursor.y--;
+				My_process = CHANGED;
 			}
+			else
+			{
+				select_cursor.y = 1;
+			}
+			break;
+		case 80://下 
+			if (select_cursor.y < 10)
+			{
+				select_cursor.y++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 10;
+			}
+			break;
+		case 75://左		
+			if (select_cursor.x > 1)
+			{
+				select_cursor.x--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 1;
+			}
+			break;
+		case 77://右
+			if (select_cursor.x < 10)
+			{
+				select_cursor.x++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 10;
+			}
+			break;
+		case 13:
+			keyin.rail = 0;
+			if_select_cmd = TRUE;
+			My_process = CHANGING;
+			break;
+		default:
+			break;
 		}
-		cell temp = { .cell = NUM,.data_real = strchr("",sum) };
-
-		My_process = CHANGING;
-		break;
-	default:
-		break;
 	}
+	else
+	{
+		switch (key)
+		{
+		case 8:
+			if (keyin.rail)
+			{
+				keyin.rail--;
+			}
+			break;
+		case 13://回车
+			if (keyin.data[0] < 'A' || keyin.data[0]>'Z')
+			{
+				keyin.rail = 0;
+				return;
+			}
+			float temp_num = 0;
+			float sum = 0;
+			char* temp_str = (char*)malloc(sizeof(char) * (keyin.rail + 2));
+			if (!temp_str)
+			{
+				exit(-1);
+			}
+			temp_str[keyin.rail] = 0;
+			for (size_t i = 0; keyin.rail; i++)
+			{
+				temp_str[i] = (char)out_queue(&keyin);
+			}
+			cursor temp_pos = str2postion(temp_str);
+			free(temp_str);
+			cursor tempmax_pos = { .x = (table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x),.y = (table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y) }
+			, tempmin_pos = { .x = (table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x), .y = (table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y) };
+			if (cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				free(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real = (char*)malloc(sizeof(char) * (strlen("SUM(%c%d:%c%d)") + 2));
+			if (!cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				exit(-1);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real[0] = 0;
+			sprintf(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real, "SUM(%c%d:%c%d)", tempmin_pos.y + 'A' - 1, tempmin_pos.x, tempmax_pos.y + 'A' - 1, tempmax_pos.x);
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].cell = FUN;
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].str_print = get_funstr_print(temp_pos.x, temp_pos.y);
 
+
+			if_select_cmd = FALSE;
+			My_change = none_change;
+			My_process = CHANGED;
+			break;
+		default:
+			if (key >= 32 && key <= 127)
+			{
+				in_queue(&keyin, key);
+			}
+			break;
+		}
+	}
+}
+void change_avr(int key)
+{
+	if (My_process == TOCHANGE)
+	{
+		switch (key)
+		{
+		case 72://上
+			if (select_cursor.y > 1)
+			{
+				select_cursor.y--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 1;
+			}
+			break;
+		case 80://下 
+			if (select_cursor.y < 10)
+			{
+				select_cursor.y++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 10;
+			}
+			break;
+		case 75://左		
+			if (select_cursor.x > 1)
+			{
+				select_cursor.x--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 1;
+			}
+			break;
+		case 77://右
+			if (select_cursor.x < 10)
+			{
+				select_cursor.x++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 10;
+			}
+			break;
+		case 13:
+			keyin.rail = 0;
+			if_select_cmd = TRUE;
+			My_process = CHANGING;
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		switch (key)
+		{
+		case 8:
+			if (keyin.rail)
+			{
+				keyin.rail--;
+			}
+			break;
+		case 13://回车
+			;
+			if (keyin.data[0] < 'A' || keyin.data[0]>'Z')
+			{
+				keyin.rail = 0;
+				return;
+			}
+			float temp_num = 0;
+			float sum = 0;
+			char* temp_str = (char*)malloc(sizeof(char) * (keyin.rail + 2));
+			if (!temp_str)
+			{
+				exit(-1);
+			}
+			temp_str[keyin.rail] = 0;
+			for (size_t i = 0; keyin.rail; i++)
+			{
+				temp_str[i] = (char)out_queue(&keyin);
+			}
+			cursor temp_pos = str2postion(temp_str);
+			free(temp_str);
+			cursor tempmax_pos = { .x = (table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x),.y = (table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y) }
+			, tempmin_pos = { .x = (table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x), .y = (table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y) };
+			if (cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				free(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real = (char*)malloc(sizeof(char) * (strlen("AVR(%c%d:%c%d)") + 2));
+			if (!cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				exit(-1);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real[0] = 0;
+			sprintf(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real, "AVR(%c%d:%c%d)", tempmin_pos.y + 'A' - 1, tempmin_pos.x, tempmax_pos.y + 'A' - 1, tempmax_pos.x);
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].cell = FUN;
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].str_print = get_funstr_print(temp_pos.x, temp_pos.y);
+
+
+			if_select_cmd = FALSE;
+			My_change = none_change;
+			My_process = CHANGED;
+			break;
+		default:
+			if (key >= 32 && key <= 127)
+			{
+				in_queue(&keyin, key);
+			}
+			break;
+		}
+	}
+}
+void change_max(int key)
+{
+	if (My_process == TOCHANGE)
+	{
+		switch (key)
+		{
+		case 72://上
+			if (select_cursor.y > 1)
+			{
+				select_cursor.y--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 1;
+			}
+			break;
+		case 80://下 
+			if (select_cursor.y < 10)
+			{
+				select_cursor.y++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 10;
+			}
+			break;
+		case 75://左		
+			if (select_cursor.x > 1)
+			{
+				select_cursor.x--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 1;
+			}
+			break;
+		case 77://右
+			if (select_cursor.x < 10)
+			{
+				select_cursor.x++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 10;
+			}
+			break;
+		case 13:
+			keyin.rail = 0;
+			if_select_cmd = TRUE;
+			My_process = CHANGING;
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		switch (key)
+		{
+		case 8:
+			if (keyin.rail)
+			{
+				keyin.rail--;
+			}
+			break;
+		case 13://回车
+			;
+			if (keyin.data[0] < 'A' || keyin.data[0]>'Z')
+			{
+				keyin.rail = 0;
+				return;
+			}
+			float temp_num = 0;
+			float sum = 0;
+			char* temp_str = (char*)malloc(sizeof(char) * (keyin.rail + 2));
+			if (!temp_str)
+			{
+				exit(-1);
+			}
+			temp_str[keyin.rail] = 0;
+			for (size_t i = 0; keyin.rail; i++)
+			{
+				temp_str[i] = (char)out_queue(&keyin);
+			}
+			cursor temp_pos = str2postion(temp_str);
+			free(temp_str);
+			cursor tempmax_pos = { .x = (table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x),.y = (table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y) }
+			, tempmin_pos = { .x = (table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x), .y = (table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y) };
+			if (cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				free(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real = (char*)malloc(sizeof(char) * (strlen("MAX(%c%d:%c%d)") + 2));
+			if (!cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				exit(-1);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real[0] = 0;
+			sprintf(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real, "MAX(%c%d:%c%d)", tempmin_pos.y + 'A' - 1, tempmin_pos.x, tempmax_pos.y + 'A' - 1, tempmax_pos.x);
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].cell = FUN;
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].str_print = get_funstr_print(temp_pos.x, temp_pos.y);
+
+
+			if_select_cmd = FALSE;
+			My_change = none_change;
+			My_process = CHANGED;
+			break;
+		default:
+			if (key >= 32 && key <= 127)
+			{
+				in_queue(&keyin, key);
+			}
+			break;
+		}
+	}
+}
+void change_min(int key)
+{
+	if (My_process == TOCHANGE)
+	{
+		switch (key)
+		{
+		case 72://上
+			if (select_cursor.y > 1)
+			{
+				select_cursor.y--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 1;
+			}
+			break;
+		case 80://下 
+			if (select_cursor.y < 10)
+			{
+				select_cursor.y++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.y = 10;
+			}
+			break;
+		case 75://左		
+			if (select_cursor.x > 1)
+			{
+				select_cursor.x--;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 1;
+			}
+			break;
+		case 77://右
+			if (select_cursor.x < 10)
+			{
+				select_cursor.x++;
+				My_process = CHANGED;
+			}
+			else
+			{
+				select_cursor.x = 10;
+			}
+			break;
+		case 13:
+			keyin.rail = 0;
+			if_select_cmd = TRUE;
+			My_process = CHANGING;
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		switch (key)
+		{
+		case 8:
+			if (keyin.rail)
+			{
+				keyin.rail--;
+			}
+			break;
+		case 13://回车
+			;
+			if (keyin.data[0] < 'A' || keyin.data[0]>'Z')
+			{
+				keyin.rail = 0;
+				return;
+			}
+			float temp_num = 0;
+			float sum = 0;
+			char* temp_str = (char*)malloc(sizeof(char) * (keyin.rail + 2));
+			if (!temp_str)
+			{
+				exit(-1);
+			}
+			temp_str[keyin.rail] = 0;
+			for (size_t i = 0; keyin.rail; i++)
+			{
+				temp_str[i] = (char)out_queue(&keyin);
+			}
+			cursor temp_pos = str2postion(temp_str);
+			free(temp_str);
+			cursor tempmax_pos = { .x = (table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x),.y = (table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y) }
+			, tempmin_pos = { .x = (table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x), .y = (table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y) };
+			if (cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				free(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real = (char*)malloc(sizeof(char) * (strlen("MIN(%c%d:%c%d)") + 2));
+			if (!cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real)
+			{
+				exit(-1);
+			}
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real[0] = 0;
+			sprintf(cell_data[temp_pos.y - 1][temp_pos.x - 1].data_real, "MIN(%c%d:%c%d)", tempmin_pos.y + 'A' - 1, tempmin_pos.x, tempmax_pos.y + 'A' - 1, tempmax_pos.x);
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].cell = FUN;
+			cell_data[temp_pos.y - 1][temp_pos.x - 1].str_print = get_funstr_print(temp_pos.x, temp_pos.y);
+
+
+			if_select_cmd = FALSE;
+			My_change = none_change;
+			My_process = CHANGED;
+			break;
+		default:
+			if (key >= 32 && key <= 127)
+			{
+				in_queue(&keyin, key);
+			}
+			break;
+		}
+	}
 }
 
 
@@ -613,11 +1213,114 @@ void sort_str()
 	if_rise = FALSE;
 	if_check = FALSE;
 }
-char* get_funstr_print()
+char* eeror_fun()
 {
-	for (size_t i = 0; i < 1; i++)
+	char* str_print = NULL;
+	str_print = (char*)malloc(sizeof(char) * strlen("ERROR_FUN") + 1);
+	if (!str_print)
 	{
-
+		exit(-1);
 	}
-
+	str_print[0] = 0;
+	strcat(str_print, "ERROR_FUN");
+	return str_print;
+}
+char* get_funstr_print(int x, int y)
+{
+	if (cell_data[y - 1][x - 1].cell == FUN)
+	{
+		char* temp_str = cell_data[y - 1][x - 1].data_real;
+		FUN_TYPE thiscell = NONE_FUN;
+		if (temp_str[0] == 'S' && temp_str[1] == 'U' && temp_str[2] == 'M')
+		{
+			thiscell = SUM;
+		}
+		else if (temp_str[0] == 'A' && temp_str[1] == 'V' && temp_str[2] == 'R')
+		{
+			thiscell = AVR;
+		}
+		else if (temp_str[0] == 'M' && temp_str[1] == 'A' && temp_str[2] == 'X')
+		{
+			thiscell = MAX;
+		}
+		else if (temp_str[0] == 'M' && temp_str[1] == 'I' && temp_str[2] == 'N')
+		{
+			thiscell = MIN;
+		}
+		else
+		{
+			return eeror_fun();
+		}
+		int len = strlen(cell_data[y - 1][x - 1].data_real);
+		if (temp_str[3] != '(' || temp_str[len - 1] != ')')
+		{
+			return eeror_fun();
+		}
+		cursor lefton, rigthtdown;
+		int i = 4;
+		char temp_c;
+		if (sscanf(temp_str + i, "%c%d", &temp_c, &lefton.x) == EOF || !(temp_c >= 'A' && lefton.x >= 1))
+		{
+			return eeror_fun();
+		}
+		lefton.y = temp_c - ('A' - 1);
+		do
+		{
+			i++;
+		} while (temp_str[i] != ':');
+		i++;
+		if (sscanf(temp_str + i, "%c%d", &temp_c, &rigthtdown.x) == EOF || !(temp_c >= 'A' && rigthtdown.x >= 1))
+		{
+			return eeror_fun();
+		}
+		rigthtdown.y = temp_c - ('A' - 1);
+		if (lefton.y > rigthtdown.y || lefton.x > rigthtdown.x)
+		{
+			return eeror_fun();
+		}
+		float a = 0, b = 0, temp_num = 0;
+		for (size_t i = lefton.y - 1; i < rigthtdown.y; i++)
+		{
+			for (size_t j = lefton.x - 1; j < rigthtdown.x; j++)
+			{
+				if (cell_data[i][j].cell == NUM)
+				{
+					sscanf(cell_data[i][j].data_real, "%f", &temp_num);
+					switch (thiscell)
+					{
+					case SUM:
+						a += temp_num;
+						break;
+					case AVR:
+						a += temp_num;
+						b++;
+						break;
+					case MAX:
+						if (a < temp_num)
+						{
+							a = temp_num;
+						}
+						break;
+					case MIN:
+						if (a > temp_num)
+						{
+							a = temp_num;
+						}
+						break;
+					default:
+						break;
+					}
+				}
+			}
+		}
+		if (thiscell == AVR)
+		{
+			a /= b;
+		}
+		return float2str(a, 3);
+	}
+	else
+	{
+		return cell_data[y - 1][x - 1].data_real;
+	}
 }

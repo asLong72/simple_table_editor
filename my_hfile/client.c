@@ -1,17 +1,21 @@
 #include "client.h"
 #define normal_muen_size 3
-#define change_muen_size 4
+#define change_muen_size 7
+#define edit_muen_size 3 
 #define sort_muen_size_for_STR  4 
 #define sort_muen_size (cell_data[table_cursor.y - 1][table_cursor.x - 1].cell == STR ? sort_muen_size_for_STR : sort_muen_size_for_STR-1)
 
 extern _Bool* set[];
-
+extern _Bool if_select_cmd;
 char* normal_muen[] = { "保存", "加载", "退出", };
-char* change_muen[] = { "编辑", "排序", "求和" , "复制" , };
+char* change_muen[] = { "编辑", "排序", "求和" ,"求平均","最大值","最小值" , "复制" , };
+char* edit_muen[] = { "数字","字符","函数", };
 char* sort_muen[] = { "开始","按列排序","升序","大小写区分", };
-
+int x1 = 1, y1 = 1;
+int x2 = 1, y2 = 1;
 DWORD WINAPI print(LPVOID pM)
 {
+
 	/*
 	GLinit();
 	Texture2D a = Loadimage("cell.png");
@@ -28,25 +32,52 @@ DWORD WINAPI print(LPVOID pM)
 	}
 	glfwTerminate();
 	*/
+	while (My_process == NONE_PROC);
 	while (My_process != ENDING)
 	{
 		if (My_process == VEIWING)
 		{
-			if (My_change != none_change && _kbhit())
+			if (_kbhit() && My_change != none_change)
 			{
-				My_process = TOCHANGE;
+				if (if_select_cmd == TRUE)
+				{
+					My_process = CHANGING;
+				}
+				else
+				{
+					My_process = TOCHANGE;
+				}
+			}
+			else if (
+				x1 != (table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x) ||
+				y1 != (table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y) ||
+
+				x2 != (table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x) ||
+				y2 != (table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y))
+			{
+				x1 = table_cursor.x < select_cursor.x ? table_cursor.x : select_cursor.x;
+				y1 = table_cursor.y < select_cursor.y ? table_cursor.y : select_cursor.y;
+
+				x2 = table_cursor.x > select_cursor.x ? table_cursor.x : select_cursor.x;
+				y2 = table_cursor.y > select_cursor.y ? table_cursor.y : select_cursor.y;
 			}
 			else
 			{
 				continue;
 			}
 		}
+
+
+
 		system("cls");
 
 		print_table();
 		print_stream();
 		print_meun();
-		My_process = VEIWING;
+		if (My_process == CHANGED)
+		{
+
+		}My_process = VEIWING;
 	}
 
 	My_process = ENDED;
@@ -57,9 +88,45 @@ void color(WORD a)      //自定义函根据参数改变颜色
 }
 void print_table()
 {
+	printf("       |");
+	for (size_t j = 0; j < 10; j++)
+	{
+		if (table_cursor.x == j + 1)
+		{
+
+			if (strlen(cell_data[0][j].str_print))
+			{
+				int len = strlen(cell_data[0][j].str_print) + 1;
+				len = (len > 6) ? len : 6;
+				for (size_t i = 0; i < len - 1; i++)
+				{
+					printf(" ");
+				}
+
+			}
+			else
+			{
+				printf("     ");
+			}
+
+		}
+		else
+		{
+			printf("     ");
+		}
+		if (j < 9)
+		{
+			printf(" %c|", '1' + j);
+		}
+		else
+		{
+			printf("10|");
+		}
+	}
+	printf("\n");
 	for (size_t i = 0; i < 10; i++)
 	{
-		for (size_t j = 0; j < 10; j++)
+		for (size_t j = 0; j < 11; j++)
 		{
 			if (table_cursor.y == i + 1 && table_cursor.x == j + 1)
 			{
@@ -75,7 +142,7 @@ void print_table()
 				}
 				else
 				{
-					printf("---------");
+					printf("--------");
 				}
 			}
 			else
@@ -85,9 +152,11 @@ void print_table()
 
 		}
 		printf("\n");
+		printf("      ");
+		printf("%c|", 'A' + i);
 		for (size_t j = 0; j < 10; j++)
 		{
-			if (table_cursor.y == i + 1 && table_cursor.x == j + 1)
+			if ((y1 <= i + 1 && x1 <= j + 1) && (y2 >= i + 1 && x2 >= j + 1))
 			{
 				color(0 | FOREGROUND_INTENSITY | 112 | BACKGROUND_INTENSITY);
 				printf("%7s", cell_data[i][j].data_real);
@@ -102,6 +171,8 @@ void print_table()
 		}
 		printf("\n");
 	}
+	//printf("%d|%d\n", table_cursor.x, table_cursor.y);
+	//printf("%d|%d", select_cursor.x, select_cursor.y);
 }
 void print_stream()
 {
@@ -116,16 +187,18 @@ void print_stream()
 	case SAVING:
 		break;
 	case CHANGED:
-		if (temp_str)
+		for (size_t i = 0; i < keyin.rail; i++)
 		{
-			printf("%s\n", temp_str);
+			printf("%c", keyin.data[i]);
 		}
+		printf("\n");
 		break;
 	case TOCHANGE:
-		if (temp_str)
+		for (size_t i = 0; i < keyin.rail; i++)
 		{
-			printf("%s\n", temp_str);
+			printf("%c", keyin.data[i]);
 		}
+		printf("\n");
 		break;
 	case CHANGING:
 		for (size_t i = 0; i < keyin.rail; i++)
@@ -173,7 +246,7 @@ void print_normal_muen()
 	printf("\n");
 	for (size_t i = 0; i < normal_muen_size; i++)
 	{
-		if (i == select_cursor.x - 1)
+		if (i == muem_cursor.x - 1)
 		{
 			printf("||");
 			color(0 | FOREGROUND_INTENSITY | 112 | BACKGROUND_INTENSITY);
@@ -216,7 +289,7 @@ void print_change_muen()
 		printf("\n");
 		for (size_t i = 0; i < change_muen_size; i++)
 		{
-			if (i == select_cursor.x - 1)
+			if (i == muem_cursor.x - 1)
 			{
 				printf("||");
 				color(0 | FOREGROUND_INTENSITY | 112 | BACKGROUND_INTENSITY);
@@ -243,6 +316,45 @@ void print_change_muen()
 		}
 		printf("\n");
 		break;
+	case edit:
+		for (size_t i = 0; i < edit_muen_size; i++)
+		{
+			for (size_t j = strlen(edit_muen[i]) + 4; j; j--)
+			{
+				printf("=");
+			}
+			printf("\t");
+		}
+		printf("\n");
+		for (size_t i = 0; i < edit_muen_size; i++)
+		{
+			if (i == muem_cursor.x - 1)
+			{
+				printf("||");
+				color(0 | FOREGROUND_INTENSITY | 112 | BACKGROUND_INTENSITY);
+				printf("%s", edit_muen[i]);
+				color(7);
+				printf("||");
+			}
+			else
+			{
+				printf("||");
+				printf("%s", edit_muen[i]);
+				printf("||");
+			}
+			printf("\t");
+		}
+		printf("\n");
+		for (size_t i = 0; i < edit_muen_size; i++)
+		{
+			for (size_t j = strlen(edit_muen[i]) + 4; j; j--)
+			{
+				printf("=");
+			}
+			printf("\t");
+		}
+		printf("\n");
+		break;
 	case sort:
 		for (size_t i = 0; i < sort_muen_size; i++)
 		{
@@ -255,7 +367,7 @@ void print_change_muen()
 		printf("\n");
 		for (size_t i = 0; i < sort_muen_size; i++)
 		{
-			if (i == select_cursor.x - 1)
+			if (i == muem_cursor.x - 1)
 			{
 				printf("||");
 				color(0 | FOREGROUND_INTENSITY | 112 | BACKGROUND_INTENSITY);

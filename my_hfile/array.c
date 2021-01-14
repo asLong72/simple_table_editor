@@ -7,6 +7,14 @@ int pushback_array(int_array* a, int data)
 	}
 	return a->num;
 }
+int pop_array(int_array* a)
+{
+	if (a->num)
+	{
+		return a->data[a->num--];
+	}
+	return a->num;
+}
 int insert_array(int_array* a, int data, int path)
 {
 	if (a->num < array_MAXSIZE && path < a->num)

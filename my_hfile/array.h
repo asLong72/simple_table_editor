@@ -8,6 +8,7 @@ typedef struct int_array
 	unsigned num;
 }int_array;
 int pushback_array(int_array* a, int data);
+int pop_array(int_array* a, int data);
 int insert_array(int_array* a, int data, int path);
 int replace_array(int_array* a, int data, int path);
 #endif // !_ARRAY_

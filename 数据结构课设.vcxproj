@@ -163,7 +163,8 @@
     <ClCompile Include="my_hfile\My_struct.h" />
     <ClCompile Include="my_hfile\server.c" />
     <ClCompile Include="my_hfile\queue.c" />
-    <ClCompile Include="参考.cpp" />
+    <ClCompile Include="my_hfile\str.c" />
+    <ClCompile Include="my_hfile\stack.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="my_hfile\array.h" />
@@ -173,6 +174,7 @@
     <ClInclude Include="my_hfile\queue.h" />
     <ClInclude Include="my_hfile\server.h" />
     <ClInclude Include="my_hfile\stack.h" />
+    <ClInclude Include="my_hfile\str.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="my_shader\UIFS.glsl" />
