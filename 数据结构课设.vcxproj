@@ -159,6 +159,7 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="my_hfile\array.c" />
     <ClCompile Include="my_hfile\client.c" />
+    <ClCompile Include="my_hfile\GUI.cpp" />
     <ClCompile Include="my_hfile\hashmap.c" />
     <ClCompile Include="my_hfile\My_struct.h" />
     <ClCompile Include="my_hfile\server.c" />
@@ -168,6 +169,7 @@
   <ItemGroup>
     <ClInclude Include="my_hfile\array.h" />
     <ClInclude Include="my_hfile\client.h" />
+    <ClInclude Include="my_hfile\GUI.h" />
     <ClInclude Include="my_hfile\hashmap.h" />
     <ClInclude Include="my_hfile\My_enum.h" />
     <ClInclude Include="my_hfile\queue.h" />

@@ -25,9 +25,13 @@ void change_select(int key);
 void change_tablecursor();
 void change_edit(int key);
 void change_sort(int key);
+void change_sum(int key);
+void change_avr(int key);
+void change_max(int key);
+void change_min(int key);
+void change_copy(int key);
 void sort_num();//Î´Íê³É
 void sort_str();
-void change_sum(int key);
 #endif // !_SERVER_
 
 

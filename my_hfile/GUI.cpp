@@ -228,8 +228,8 @@ void GLinit()
 	glfwInitHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwInitHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwInitHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	window = glfwCreateWindow(720, 720, "name", NULL, NULL);
-	if (window == NULL)
+	Mywindow = glfwCreateWindow(720, 720, "name", NULL, NULL);
+	if (Mywindow == NULL)
 	{
 		printf("[ERROR]Failed to creat window\n");
 		exit(-1);
@@ -238,7 +238,7 @@ void GLinit()
 	{
 		printf("[INFO]Successfully created window\n");
 	}
-	glfwMakeContextCurrent(window);
+	glfwMakeContextCurrent(Mywindow);
 	if (gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) == 0)
 	{
 		printf("[ERROR]Failed to load GLAD\n");
@@ -249,10 +249,10 @@ void GLinit()
 		printf("[INFO]Successfully loaded GLAD\n");
 	}
 
-	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
-	glfwSetCursorPosCallback(window, CursorPosCallback);
-	glfwSetCursorEnterCallback(window, CursorEnterCallback);
-	glfwSetMouseButtonCallback(window, MouseButtonCallback);
+	glfwSetFramebufferSizeCallback(Mywindow, FramebufferSizeCallback);
+	glfwSetCursorPosCallback(Mywindow, CursorPosCallback);
+	glfwSetCursorEnterCallback(Mywindow, CursorEnterCallback);
+	glfwSetMouseButtonCallback(Mywindow, MouseButtonCallback);
 	glClearColor(1, 1, 1, 1);
 }
 void processInput(GLFWwindow* window)

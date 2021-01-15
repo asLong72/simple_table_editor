@@ -13,7 +13,7 @@
 #include "my_hfile/client.h"
 #include "my_hfile/server.h"
 
-// GLFWwindow* window = NULL;
+// GLFWwindow* Mywindow = NULL;
 Hashmap my_table;
 process My_process;
 change_selete My_change;
@@ -22,6 +22,7 @@ cell cell_data[10][10];
 cursor table_cursor;
 cursor select_cursor;
 cursor muem_cursor;
+cursor stream_cursor;
 char* temp_str = NULL;
 /*
 【基本要求】
@@ -37,28 +38,31 @@ char* temp_str = NULL;
 
 void init_array()
 {
-	My_process = VEIWING;
+	My_process = NONE_PROC;
 	My_change = none_change;
 	keyin.rail = 0;
 	table_cursor.x = 1, table_cursor.y = 1;
-	select_cursor.x = 1, select_cursor.y = 1;
+	select_cursor = table_cursor;
 	muem_cursor.x = 1, muem_cursor.y = 1;
+	stream_cursor.x = 1, stream_cursor.y = 1;
 	for (size_t i = 0; i < 10; i++)
 	{
 		for (size_t j = 0; j < 10; j++)
 		{
 			cell_data[i][j].cell = STR;
 			cell_data[i][j].data_real = (char*)malloc(sizeof(char) * 100);
-			cell_data[i][j].str_print = cell_data[i][j].data_real;
 			if (!cell_data[i][j].data_real)
 			{
 				exit(-1);
 			}
-			cell_data[i][j].data_real[0] = '\0';
-			if (rand()%20>15)
+			cell_data[i][j].data_real[0] = 0;
+			cell_data[i][j].str_print = cell_data[i][j].data_real;
+			if (rand() % 20 > 15)
 			{
-				
-			}//strcat(cell_data[i][j].data_real,"123");
+
+			}//strcat(cell_data[i][j].data_real, "123");
+			cell_data[i][j].data_real[0] = j + 'A';
+			cell_data[i][j].data_real[1] = 0;
 		}
 	}
 }

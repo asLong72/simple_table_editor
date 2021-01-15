@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "..\include\glad\glad.h"
 #include "..\include\GLFW\glfw3.h"
-extern GLFWwindow* window;
+GLFWwindow* Mywindow;
 typedef struct Texture2D
 {
 	unsigned textID;
